@@ -1,7 +1,7 @@
 'use strict';
 // P0 iPhone 實機測試頁。語法限 ES2017 以內。
 (function () {
-  var BUILD = 'p0-1';
+  var BUILD = 'p0-2';
 
   function $(id) { return document.getElementById(id); }
   var setVal = window.em3SetVal || function () {};
@@ -119,8 +119,6 @@
 
   // ---------------------------------------------------------------- 3 / 4. 盤面手勢、底部安全區
   var N = 9;
-  var COLORS = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#fb8c00'];
-  // 形狀：0 圓、1 方、2 星、3 愛心、4 水滴、5 三角
   var board = [];
   var seed = 20261024;
   function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
@@ -175,56 +173,110 @@
     requestDraw();
   }
 
+  // 糖果樣式（風格樣品）：[亮部, 本色, 暗邊]
+  // 形狀：0 紅軟糖豆、1 藍圓球、2 綠方軟糖、3 黃水滴、4 紫花形、5 橘菱形
+  var CANDY = [
+    ['#ffb3b3', '#ee1c2c', '#7a0010'],
+    ['#b5e2ff', '#1f86ee', '#0a3580'],
+    ['#c8f7a8', '#2fbf3a', '#11631a'],
+    ['#fff8b8', '#ffcc14', '#a86f00'],
+    ['#efc2ff', '#a636e0', '#4a0c7c'],
+    ['#ffd9a6', '#ff8814', '#9c3d00']
+  ];
+
+  function polyPath(pts) {
+    for (var i = 0; i < pts.length; i++) {
+      if (i === 0) ctx.moveTo(pts[i][0], pts[i][1]); else ctx.lineTo(pts[i][0], pts[i][1]);
+    }
+    ctx.closePath();
+  }
+  // 依角度給半徑的封閉曲線（rot 是整體旋轉）
+  function polarPts(cx, cy, fn, rot) {
+    var pts = [], n = 64;
+    for (var i = 0; i < n; i++) {
+      var a = i / n * Math.PI * 2, d = fn(a);
+      var x = Math.cos(a) * d[0], y = Math.sin(a) * d[1];
+      pts.push([cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)]);
+    }
+    return pts;
+  }
+  // 圓角多邊形：在每條邊的中點之間用頂點當控制點
+  function roundPolyPath(pts) {
+    var n = pts.length;
+    function mid(i) { var a = pts[i % n], b = pts[(i + 1) % n]; return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
+    var m = mid(n - 1);
+    ctx.moveTo(m[0], m[1]);
+    for (var i = 0; i < n; i++) {
+      m = mid(i);
+      ctx.quadraticCurveTo(pts[i][0], pts[i][1], m[0], m[1]);
+    }
+    ctx.closePath();
+  }
+  function roundRectPath(x, y, w, h, rr) {
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
   function pathPiece(type, cx, cy, r) {
     ctx.beginPath();
-    var i, a;
     if (type === 0) {
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      polyPath(polarPts(cx, cy, function () { return [r * 1.08, r * 0.7]; }, -0.45));
     } else if (type === 1) {
-      ctx.rect(cx - r * 0.88, cy - r * 0.88, r * 1.76, r * 1.76);
+      ctx.arc(cx, cy, r * 0.98, 0, Math.PI * 2);
     } else if (type === 2) {
-      for (i = 0; i < 10; i++) {
-        a = -Math.PI / 2 + i * Math.PI / 5;
-        var rr = (i % 2 === 0) ? r * 1.12 : r * 0.5;
-        var x = cx + Math.cos(a) * rr, y = cy + 0.05 * r + Math.sin(a) * rr;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
+      roundRectPath(cx - r * 0.86, cy - r * 0.86, r * 1.72, r * 1.72, r * 0.42);
     } else if (type === 3) {
-      ctx.moveTo(cx, cy + r * 0.95);
-      ctx.bezierCurveTo(cx - r * 1.45, cy + r * 0.05, cx - r * 0.95, cy - r * 1.0, cx, cy - r * 0.38);
-      ctx.bezierCurveTo(cx + r * 0.95, cy - r * 1.0, cx + r * 1.45, cy + r * 0.05, cx, cy + r * 0.95);
+      var oy = r * 0.12;
+      ctx.moveTo(cx, cy - r * 1.08 + oy);
+      ctx.bezierCurveTo(cx + r * 0.25, cy - r * 0.55 + oy, cx + r * 0.88, cy - r * 0.15 + oy, cx + r * 0.88, cy + r * 0.2 + oy);
+      ctx.arc(cx, cy + r * 0.2 + oy, r * 0.88, 0, Math.PI, false);
+      ctx.bezierCurveTo(cx - r * 0.88, cy - r * 0.15 + oy, cx - r * 0.25, cy - r * 0.55 + oy, cx, cy - r * 1.08 + oy);
       ctx.closePath();
     } else if (type === 4) {
-      var oy = -r * 0.12;
-      ctx.moveTo(cx, cy - r * 1.05 + oy);
-      ctx.bezierCurveTo(cx + r * 0.2, cy - r * 0.5 + oy, cx + r * 0.85, cy - r * 0.1 + oy, cx + r * 0.85, cy + r * 0.25 + oy);
-      ctx.arc(cx, cy + r * 0.25 + oy, r * 0.85, 0, Math.PI, false);
-      ctx.bezierCurveTo(cx - r * 0.85, cy - r * 0.1 + oy, cx - r * 0.2, cy - r * 0.5 + oy, cx, cy - r * 1.05 + oy);
-      ctx.closePath();
+      polyPath(polarPts(cx, cy, function (a) { var d = r * (0.84 + 0.17 * Math.cos(6 * a)); return [d, d]; }, Math.PI / 6));
     } else {
-      ctx.moveTo(cx, cy - r * 1.0);
-      ctx.lineTo(cx + r * 1.05, cy + r * 0.85);
-      ctx.lineTo(cx - r * 1.05, cy + r * 0.85);
-      ctx.closePath();
+      roundPolyPath([[cx - r * 1.12, cy], [cx - r * 0.5, cy - r * 0.86], [cx + r * 0.5, cy - r * 0.86],
+                     [cx + r * 1.12, cy], [cx + r * 0.5, cy + r * 0.86], [cx - r * 0.5, cy + r * 0.86]]);
     }
   }
 
-  function drawPiece(type, px, py, scale, glow) {
+  function drawPiece(type, px, py, scale) {
     var cx = px + cell / 2, cy = py + cell / 2;
-    var r = cell * 0.33 * (scale || 1);
+    var r = cell * 0.4 * (scale || 1);
+    var col = CANDY[type];
     ctx.save();
+    // 底影
     pathPiece(type, cx, cy, r);
-    ctx.fillStyle = COLORS[type];
+    ctx.shadowColor = 'rgba(0,0,0,0.38)';
+    ctx.shadowBlur = r * 0.3;
+    ctx.shadowOffsetY = r * 0.14;
+    var g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.08, cx, cy, r * 1.25);
+    g.addColorStop(0, col[0]);
+    g.addColorStop(0.5, col[1]);
+    g.addColorStop(1, col[2]);
+    ctx.fillStyle = g;
     ctx.fill();
-    ctx.lineWidth = Math.max(1.5, cell * 0.05);
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = Math.max(1, r * 0.07);
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+    ctx.strokeStyle = col[2];
     ctx.stroke();
-    ctx.lineWidth = Math.max(1, cell * 0.025);
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-    pathPiece(type, cx, cy, r * 0.8);
-    ctx.stroke();
+    // 反光：左上一抹白
+    ctx.beginPath();
+    polyPath(polarPts(cx - r * 0.3, cy - r * 0.42, function () { return [r * 0.38, r * 0.17]; }, -0.6));
+    var hg = ctx.createLinearGradient(cx, cy - r * 0.7, cx, cy - r * 0.2);
+    hg.addColorStop(0, 'rgba(255,255,255,0.95)');
+    hg.addColorStop(1, 'rgba(255,255,255,0.15)');
+    ctx.fillStyle = hg;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx + r * 0.38, cy + r * 0.3, r * 0.08, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fill();
     ctx.restore();
   }
 
@@ -236,13 +288,13 @@
     if (anim) t = Math.min(1, (now - anim.t0) / anim.dur);
     var e = ease(t);
     ctx.clearRect(0, 0, W, W);
-    ctx.fillStyle = '#16213e';
-    ctx.fillRect(0, 0, W, W);
-    var r, c;
+    var r, c, gap = cell * 0.04;
     for (r = 0; r < N; r++) {
       for (c = 0; c < N; c++) {
-        ctx.fillStyle = ((r + c) % 2) ? '#1f2c52' : '#1a2646';
-        ctx.fillRect(c * cell, r * cell, cell, cell);
+        ctx.beginPath();
+        roundRectPath(c * cell + gap, r * cell + gap, cell - 2 * gap, cell - 2 * gap, cell * 0.16);
+        ctx.fillStyle = ((r + c) % 2) ? 'rgba(40,60,150,0.62)' : 'rgba(55,80,175,0.62)';
+        ctx.fill();
       }
     }
     var moving = [];
@@ -268,13 +320,15 @@
   function drawSelection(px, py) {
     ctx.save();
     var m = cell * 0.06;
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    ctx.fillRect(px + m, py + m, cell - 2 * m, cell - 2 * m);
-    ctx.shadowColor = '#ffffff';
+    ctx.beginPath();
+    roundRectPath(px + m, py + m, cell - 2 * m, cell - 2 * m, cell * 0.18);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fill();
+    ctx.shadowColor = '#fff6a0';
     ctx.shadowBlur = cell * 0.35;
-    ctx.lineWidth = Math.max(3, cell * 0.11);
+    ctx.lineWidth = Math.max(3, cell * 0.09);
     ctx.strokeStyle = '#ffffff';
-    ctx.strokeRect(px + m + 1, py + m + 1, cell - 2 * m - 2, cell - 2 * m - 2);
+    ctx.stroke();
     ctx.restore();
   }
 

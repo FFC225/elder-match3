@@ -1,6 +1,6 @@
 'use strict';
 // 改任何檔案內容後，要把 VERSION 加一（p0-2、p0-3...），手機才會拿到新檔。
-const VERSION = 'p0-1';
+const VERSION = 'p0-2';
 const CACHE = 'em3p0-' + VERSION;
 const FILES = [
   './',
