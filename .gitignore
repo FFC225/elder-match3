@@ -1,0 +1,11 @@
+.env
+.env.*
+*.session
+sessions/
+__pycache__/
+.venv/
+data/
+data-*/
+.claude/
+node_modules/
+research/

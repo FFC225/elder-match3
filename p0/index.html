@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>消消樂測試</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="消消樂測試">
+<meta name="theme-color" content="#0b1020">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="errbox" class="errbox"></div>
+<div id="safe-probe"></div>
+
+<!-- ES5 區：最先執行。就算後面 app.js 壞掉，iOS 版本與錯誤框仍然有效。 -->
+<script>
+(function () {
+  window.em3SetVal = function (key, text, state) {
+    var els = document.querySelectorAll('[data-key="' + key + '"]');
+    var mark = state === 'ok' ? '✓ ' : state === 'bad' ? '✗ ' : state === 'warn' ? '⚠ ' : '';
+    for (var i = 0; i < els.length; i++) {
+      els[i].textContent = mark + text;
+      els[i].className = 'v' + (state ? ' ' + state : '');
+    }
+  };
+  window.em3ShowError = function (text) {
+    var box = document.getElementById('errbox');
+    if (!box) return;
+    var d = document.createElement('div');
+    d.textContent = '⚠ 錯誤：' + text;
+    box.appendChild(d);
+  };
+  window.onerror = function (msg, src, line, col) {
+    var f = src ? String(src).split('/').pop() : '';
+    window.em3ShowError(msg + (f ? ' (' + f + ':' + line + ':' + col + ')' : ''));
+    return false;
+  };
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    window.em3ShowError('Promise 被拒絕：' + (r && (r.name || r.message) ? (r.name || '') + ' ' + (r.message || '') : String(r)));
+  });
+  var ua = navigator.userAgent || '';
+  var m = /OS (\d+)[_.](\d+)(?:[_.](\d+))? like Mac OS X/.exec(ua);
+  var txt, st;
+  if (m) {
+    var major = parseInt(m[1], 10);
+    txt = 'iOS ' + m[1] + '.' + m[2] + (m[3] ? '.' + m[3] : '') + '（UA 回報值，以「設定 > 一般 > 關於本機」為準）';
+    st = major < 15 ? 'warn' : 'ok';
+  } else if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) {
+    txt = 'iPadOS（UA 假裝成 Mac，讀不到版本）：' + ua;
+    st = 'warn';
+  } else {
+    txt = '不是 iOS。原始 UA：' + ua;
+    st = 'warn';
+  }
+  // 這段在 <main> 之前執行，那時列還不存在，所以等 DOM 建好再寫入（不依賴 app.js）
+  function apply() {
+    window.em3SetVal('ios', txt, st);
+    window.em3SetVal('ua', ua, '');
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply);
+  } else {
+    apply();
+  }
+})();
+</script>
+
+<main id="page">
+<h1>消消樂 P0 實機測試</h1>
+<p class="lead">請照順序做 1 到 8 項，最後把「摘要」那一塊（可以多截幾張）傳回來。</p>
+
+<section class="card summary" id="summary">
+  <h2>摘要（先截這一張）</h2>
+  <div class="row"><div class="k">測試頁版本</div><div class="v" data-key="build">-</div></div>
+  <div class="row"><div class="k">iOS 版本</div><div class="v" data-key="ios">讀取中…</div></div>
+  <div class="row"><div class="k">從主畫面開</div><div class="v" data-key="standalone">讀取中…</div></div>
+  <div class="row"><div class="k">螢幕</div><div class="v" data-key="screen">讀取中…</div></div>
+  <div class="row"><div class="k">像素比</div><div class="v" data-key="dpr">讀取中…</div></div>
+  <div class="row"><div class="k">安全區</div><div class="v" data-key="safe">讀取中…</div></div>
+  <div class="row"><div class="k">功能支援</div><div class="v" data-key="feat">讀取中…</div></div>
+  <div class="row"><div class="k">手勢事件</div><div class="v" data-key="gesture">尚未操作盤面</div></div>
+  <div class="row"><div class="k">聲音</div><div class="v" data-key="audio">尚未測</div></div>
+  <div class="row"><div class="k">存檔</div><div class="v" data-key="store">讀取中…</div></div>
+  <div class="row"><div class="k">持久儲存</div><div class="v" data-key="persist">讀取中…</div></div>
+  <div class="row"><div class="k">QR / 相機</div><div class="v" data-key="qr">尚未測</div></div>
+  <div class="row"><div class="k">快取控制</div><div class="v" data-key="swctl">讀取中…</div></div>
+  <div class="row"><div class="k">離線快取</div><div class="v" data-key="swcache">讀取中…</div></div>
+  <div class="row"><div class="k">截圖時間</div><div class="v" data-key="now">-</div></div>
+</section>
+
+<section class="card" id="s1">
+  <h2><span class="num">1</span>裝置資訊（自動）</h2>
+  <div class="row"><div class="k">iOS 版本</div><div class="v" data-key="ios">讀取中…</div></div>
+  <div class="row"><div class="k">原始 UA</div><div class="v small" data-key="ua">讀取中…</div></div>
+  <div class="row"><div class="k">從主畫面開</div><div class="v" data-key="standalone">讀取中…</div></div>
+  <div class="row"><div class="k">螢幕</div><div class="v" data-key="screen">讀取中…</div></div>
+  <div class="row"><div class="k">像素比</div><div class="v" data-key="dpr">讀取中…</div></div>
+  <div class="row"><div class="k">安全區</div><div class="v" data-key="safe">讀取中…</div></div>
+  <div class="row"><div class="k">Pointer Events</div><div class="v" data-key="f-pointer">-</div></div>
+  <div class="row"><div class="k">Service Worker</div><div class="v" data-key="f-sw">-</div></div>
+  <div class="row"><div class="k">getUserMedia</div><div class="v" data-key="f-gum">-</div></div>
+  <div class="row"><div class="k">IndexedDB</div><div class="v" data-key="f-idb">-</div></div>
+  <div class="row"><div class="k">audioSession</div><div class="v" data-key="f-audiosession">-</div></div>
+</section>
+
+<section class="card" id="s2">
+  <h2><span class="num">2</span>加到主畫面</h2>
+  <p>怎麼加：用 <b>Safari</b> 打開這一頁 → 點下方的「分享」鈕（方框加向上箭頭）→ 往下找「加入主畫面」→ 右上角「加入」。之後從主畫面的圖示打開。</p>
+  <div class="row"><div class="k">目前是否主畫面開</div><div class="v" data-key="standalone">讀取中…</div></div>
+  <p class="sub">下面是這一頁自己檢查到的設定：</p>
+  <div id="metaList"></div>
+  <div class="row"><div class="k">manifest 內容</div><div class="v small" data-key="manifest">讀取中…</div></div>
+</section>
+
+<section class="card" id="stage">
+  <h2 class="stage-hide"><span class="num">3</span>盤面手勢</h2>
+  <p class="stage-hide">兩種玩法都要試：① 按住一顆、往旁邊拖到相鄰格；② 點一顆（會發亮）再點旁邊一顆。點同一顆取消；點到不相鄰的會改選那顆。換了就留著，不會消除。下面「最後一次操作」的 (列,欄) 從 1 算起。</p>
+  <div class="stage-top"><button type="button" class="btn" id="btnFull">進入全螢幕測試（盤面貼底）</button></div>
+  <div id="boardWrap"><canvas id="board"></canvas></div>
+  <div class="status" id="lastOp">最後一次操作：尚未操作</div>
+  <div class="status small" id="evInfo">事件來源：-</div>
+  <h2 class="stage-hide"><span class="num">4</span>底部安全區</h2>
+  <p id="desc4short" class="stage-only">從盤面最底一列往上拖，不應該跳回主畫面。</p>
+  <p id="desc4" class="stage-hide">從盤面最底一列往上拖，不應該跳回主畫面。（建議按上面的「全螢幕測試」，這樣下面這排才會貼在螢幕底部，距離＝安全區＋16px。）</p>
+  <div class="status" id="propInfo">還沒點道具</div>
+  <div class="props" id="props">
+    <button type="button" class="btn prop" data-n="1">道具 1</button>
+    <button type="button" class="btn prop" data-n="2">道具 2</button>
+    <button type="button" class="btn prop" data-n="3">道具 3</button>
+    <button type="button" class="btn prop" data-n="4">道具 4</button>
+  </div>
+</section>
+
+<section class="card" id="s5">
+  <h2><span class="num">5</span>聲音</h2>
+  <p class="warnbox">聽不到聲音？請把手機左側的靜音鍵撥開（看不到橘色）</p>
+  <button type="button" class="btn" id="btnPlay">播放聲音</button>
+  <div class="row"><div class="k">結果</div><div class="v" data-key="audio1">尚未播放</div></div>
+  <button type="button" class="btn" id="btnPlayback">用 audioSession=playback 再播一次</button>
+  <div class="row"><div class="k">結果</div><div class="v" data-key="audio2">尚未播放</div></div>
+</section>
+
+<section class="card" id="s6">
+  <h2><span class="num">6</span>存檔</h2>
+  <button type="button" class="btn" id="btnSave">存一筆進度</button>
+  <div class="row"><div class="k">localStorage</div><div class="v pre" data-key="st-ls">讀取中…</div></div>
+  <div class="row"><div class="k">IndexedDB</div><div class="v pre" data-key="st-idb">讀取中…</div></div>
+  <div class="row"><div class="k">兩邊是否一致</div><div class="v" data-key="st-cmp">讀取中…</div></div>
+  <div class="row"><div class="k">持久儲存</div><div class="v" data-key="persist">讀取中…</div></div>
+  <p class="sub">測法：存幾筆 → 把網頁完全關掉（上滑清掉）→ 重開，看計數還在不在。</p>
+</section>
+
+<section class="card" id="s7">
+  <h2><span class="num">7</span>進度 QR 碼</h2>
+  <button type="button" class="btn" id="btnShowQR">顯示進度 QR 碼</button>
+  <div id="qrBox" class="qrbox hide">
+    <canvas id="qrCanvas"></canvas>
+    <div class="qrtext" id="qrText"></div>
+  </div>
+  <button type="button" class="btn" id="btnScan">掃描找回進度</button>
+  <div id="scanBox" class="hide">
+    <video id="scanVideo" playsinline muted autoplay></video>
+    <button type="button" class="btn danger" id="btnCancelScan">取消（關相機）</button>
+  </div>
+  <canvas id="scanCanvas" class="hide"></canvas>
+  <div class="row"><div class="k">狀態</div><div class="v" data-key="qr">尚未測</div></div>
+  <p class="sub">掃描測法：用另一支手機顯示 QR 碼，這支來掃。若從主畫面圖示開不能用相機（舊 iOS 的限制），請改用 Safari 直接開網址再測一次，並把兩種結果都回報。</p>
+  <p class="sub">手動備案：把上面那串文字貼進來。</p>
+  <textarea id="pasteBox" rows="3" placeholder="貼上 EM3P0: 開頭的文字"></textarea>
+  <button type="button" class="btn" id="btnPaste">用貼上的文字找回</button>
+</section>
+
+<section class="card" id="s8">
+  <h2><span class="num">8</span>離線</h2>
+  <div class="row"><div class="k">Service Worker</div><div class="v" data-key="swreg">-</div></div>
+  <div class="row"><div class="k">離線快取</div><div class="v" data-key="swcache">讀取中…</div></div>
+  <div class="row"><div class="k">快取控制本頁</div><div class="v" data-key="swctl">讀取中…</div></div>
+  <div class="row"><div class="k">目前網路</div><div class="v" data-key="online">-</div></div>
+  <button type="button" class="btn" id="btnRecheck">重新檢查</button>
+  <p>關掉 Wi-Fi 和行動網路後，從主畫面圖示打開，應該還看得到這頁。（第一次載入後要等「離線快取」變成已就緒、再重開一次頁面，「快取控制本頁」才會變成是。）</p>
+</section>
+
+</main>
+
+<script src="vendor/qrcode.js"></script>
+<script src="vendor/jsQR.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
