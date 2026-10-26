@@ -9,3 +9,5 @@ data-*/
 .claude/
 node_modules/
 research/
+SESSION_LOG.md
+_archived/
